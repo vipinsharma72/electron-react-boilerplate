@@ -10,6 +10,7 @@
  * When running `npm run build` or `npm run build:main`, this file is compiled to
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
+
 import path from 'path';
 import { createServer } from 'net';
 import { app, BrowserWindow, shell, ipcMain } from 'electron';
@@ -20,7 +21,6 @@ import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 
 // import { json } from 'node:stream/consumers';
-
 class AppUpdater {
   constructor() {
     log.transports.file.level = 'info';
@@ -124,6 +124,18 @@ const createWindow = async () => {
 /**
  * Create TCP server here
  */
+let lastDataReceived = Date.now();
+let disconnected = false;
+setInterval(() => {
+  if (!disconnected && Date.now() - lastDataReceived > 20000) {
+    console.log(
+      'No data received for 20 seconds, triggering deviceDisconnected...',
+    );
+    mainWindow?.webContents.send('deviceDisconnected', true);
+    disconnected = true;
+  }
+}, 2000);
+
 function handleConnection(conn: any) {
   const remoteAddress = `${conn.remoteAddress}:${conn.remotePort}`;
   console.log('new client connection from %s', remoteAddress);
@@ -134,6 +146,8 @@ function handleConnection(conn: any) {
     console.log('Connection %s error: %s', remoteAddress, err.message);
   }
   function onConnData(d: any) {
+    lastDataReceived = Date.now();
+    disconnected = false;
     console.log('connection data from %s: %s', remoteAddress, d);
     // const jsonData = JSON.parse(d);
 
@@ -203,6 +217,7 @@ app
 // console.log(getIPAddress());
 
 let initFlag = false;
+
 setInterval(() => {
   // const ip = getIPAddress();
 
@@ -214,7 +229,6 @@ setInterval(() => {
       console.log('server listening to %j', server.address());
     });
   }
-
   initFlag = true;
 }, 3000);
 

@@ -1,5 +1,4 @@
-/* eslint-disable prettier/prettier */
-import { Segmented, Input, Divider } from 'antd';
+import { Segmented, Input, Divider, Result } from 'antd';
 import { useState } from 'react';
 import LiveData from './LiveData';
 import History from './History';
@@ -7,6 +6,8 @@ import History from './History';
 function MainPage() {
   const [ipAddress, setIpAddress] = useState('');
   const [port, setPort] = useState(null);
+  const [segmented, setSegmented] = useState('live');
+  const [isDisconnected, setIsDisconnected] = useState(false);
 
   // window.electron.ipcRenderer.on('ipAddress', (arg) => {
   //   // eslint-disable-next-line no-console
@@ -17,11 +18,9 @@ function MainPage() {
     // console.log(arg);
     // eslint-disable-next-line no-console
     setIpAddress(arg.ipAddress);
-
     setPort(arg.port);
   });
 
-  const [segmented, setSegmented] = useState('live');
   // const [ipAddress, setIpAddress] = useState('');
 
   const SegmentOptions = [
@@ -38,7 +37,20 @@ function MainPage() {
   //   fetchIPAddress();
   // }, []);
 
-  return (
+  window.electron.ipcRenderer.on('deviceDisconnected', (connectionStatus) => {
+    // eslint-disable-next-line no-console
+    // message.error('Device disconnected');
+    setIsDisconnected(connectionStatus);
+  });
+
+  return isDisconnected ? (
+    <Result
+      status="500"
+      title="500"
+      subTitle="Sorry, something went wrong."
+      // extra={<Button type="primary">Back Home</Button>}
+    />
+  ) : (
     <div
       style={{
         padding: '20px',
@@ -65,7 +77,12 @@ function MainPage() {
         options={SegmentOptions}
         onChange={(segment) => setSegmented(segment)}
       />
-      {segmented === 'live' ? <LiveData /> : <History />}
+
+      {segmented === 'live' ? (
+        <LiveData setIsDisconnected={setIsDisconnected} />
+      ) : (
+        <History />
+      )}
     </div>
   );
 }
